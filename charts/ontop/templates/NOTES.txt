@@ -1,0 +1,11 @@
+Ontop endpoint installed as {{ include "ontop.fullname" . }}.
+
+Access the SPARQL endpoint locally:
+  kubectl --namespace {{ .Release.Namespace }} port-forward service/{{ include "ontop.fullname" . }} 8081:{{ .Values.service.port }}
+  http://localhost:8081/sparql
+
+Test Service connectivity:
+  helm test {{ .Release.Name }} --namespace {{ .Release.Namespace }}
+
+The database and mappings come from {{ include "ontop.image" . }}.
+Each replica serves the same read-only snapshot; no PVC or ingestion Job is created.

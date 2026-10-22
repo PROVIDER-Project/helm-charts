@@ -1,0 +1,11 @@
+# Local image built in ../sparql-faostat-ontop with docker compose build.
+# Load it into local cluster nodes, or override with a published repository/digest.
+image:
+  repository: provider/sparql-faostat-ontop
+  tag: "0.0.1"
+ingress:
+  hosts:
+    - host: faostat.example.org
+      paths:
+        - path: /
+          pathType: Prefix

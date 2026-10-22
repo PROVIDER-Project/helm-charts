@@ -1,0 +1,17 @@
+apiVersion: v2
+name: ontop
+description: A read-only Ontop endpoint with DuckDB data and mappings baked into its image
+type: application
+version: 0.1.0
+appVersion: "5.5.0"
+kubeVersion: ">=1.25.0-0"
+home: https://github.com/PROVIDER-Project/helm-charts
+sources:
+  - https://github.com/PROVIDER-Project/helm-charts
+  - https://github.com/ontop/ontop
+keywords:
+  - ontop
+  - sparql
+  - duckdb
+maintainers:
+  - name: Claus Stadler

@@ -1,0 +1,97 @@
+# Each replica serves its own immutable copy of the database from the image.
+replicaCount: 1
+
+image:
+  # Required: select a self-contained endpoint image (see examples/).
+  repository: ""
+  tag: ""
+  # When set, digest takes precedence over tag.
+  digest: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Requires an installed Ingress controller; TLS secrets are supplied externally.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: ontop.example.org
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+env:
+  ONTOP_LOG_LEVEL: info
+  # DuckDB also allocates native memory; the JVM heap is only part of pod memory.
+  ONTOP_JAVA_ARGS: "-Xms128m -Xmx512m"
+
+podAnnotations: {}
+podSecurityContext:
+  runAsNonRoot: true
+  # ontop/ontop:5.5.0 uses UID/GID 999; change for another image if necessary.
+  runAsUser: 999
+  runAsGroup: 999
+  fsGroup: 999
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+# Starting values, not a full-dataset performance sizing guarantee.
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+    ephemeral-storage: 256Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+    ephemeral-storage: 2Gi
+
+# Native JDBC extraction and DuckDB spill files use writable ephemeral storage.
+tmp:
+  sizeLimit: 1Gi
+
+startupProbe:
+  tcpSocket:
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 60
+readinessProbe:
+  httpGet:
+    # A bounded SPARQL request, rather than a scan/count of the dataset.
+    path: /sparql?query=ASK%20%7B%7D
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+livenessProbe:
+  tcpSocket:
+    port: http
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+minReadySeconds: 5
+terminationGracePeriodSeconds: 30
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
