@@ -2,7 +2,7 @@
 
 **Work in progress**
 
-* For me its not yet clear whether to use one repo for all charts or split this up into different repos. Right now the naming suggests a central repo for PROVIDER helm charts.
+* For me its not yet clear whether to use one repo for all charts or split this up into different repos. Right now the naming suggests a central repo for all PROVIDER helm charts.
 * Main use cases so far are the sparql/ontop services, such as [sparql-tiva-ontop](https://github.com/PROVIDER-Project/sparql-tiva-ontop) and [sparql-faostat-ontop](https://github.com/PROVIDER-Project/sparql-tiva-ontop). So far I used Flux CD to reconcile a k8s cluster based on the plain yaml files, but perhaps it gets a bit nicer with helm in between - so consider this is an ongoing experiment for what's the best way to manage those services.
 
 ## Synopsis
