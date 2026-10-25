@@ -1,93 +1,87 @@
 # PROVIDER Helm charts
 
-**Work in progress**
+A shared chart for self-contained Ontop/DuckDB endpoint images. Each dataset
+uses its own Helm release and values file; database builds stay in the dataset
+repositories.
 
 * For me its not yet clear whether to use one repo for all charts or split this up into different repos. Right now the naming suggests a central repo for all PROVIDER helm charts.
 * Main use cases so far are the sparql/ontop services, such as [sparql-tiva-ontop](https://github.com/PROVIDER-Project/sparql-tiva-ontop) and [sparql-faostat-ontop](https://github.com/PROVIDER-Project/sparql-tiva-ontop). So far I used Flux CD to reconcile a k8s cluster based on the plain yaml files, but perhaps it gets a bit nicer with helm in between - so consider this is an ongoing experiment for what's the best way to manage those services.
 
-## Synopsis
+## Install
 
-Shared Kubernetes charts for PROVIDER endpoints. This directory is ready to
-be managed as an independent Git repository; this setup made no Git changes.
-The proposed source URL is `https://github.com/PROVIDER-Project/helm-charts`;
-update chart metadata if the eventual repository uses another location.
-
-- `charts/ontop/`: application chart for self-contained, read-only Ontop/DuckDB images.
-- `examples/faostat.yaml`: values for the existing local FAOSTAT image.
-- `examples/tiva.yaml`: template for a future self-contained TiVA image.
-- `tests/`: rendering contracts, independent of the dataset build repositories.
-- `scripts/check.sh`, `scripts/package.sh`: validation and local packaging.
-
-## Install from source
-
-Run from this directory. Build the FAOSTAT image in its sibling repository:
+Requires Kubernetes 1.25+ and Helm 3.12+ or 4. From this repository:
 
 ```sh
-(cd ../sparql-faostat-ontop && docker compose build)
-# For Kind (otherwise publish the image to a registry accessible to your nodes):
-kind load docker-image provider/sparql-faostat-ontop:0.0.1 --name YOUR_CLUSTER
 helm upgrade --install faostat ./charts/ontop -f examples/faostat.yaml \
   --namespace provider --create-namespace --wait --timeout 5m
 helm test faostat --namespace provider --logs
 ```
 
-For a remote registry, override `image.repository` and `image.tag`, or pin
-`image.digest`. Supply registry credentials with `imagePullSecrets` if needed.
-No image is implicitly selected: both the repository and a tag or digest are
-required. Ingress is disabled in the examples; configure hostname, controller
-class and TLS for the target cluster before enabling it.
+Use `baci` / `examples/baci.yaml` or `tiva` / `examples/tiva.yaml` for the other
+endpoints. The examples select these image repositories with tag `0.0.1`:
 
-TiVA currently needs its data, JDBC driver and configuration mounted by Compose.
-Its example is a template with explicit placeholder image coordinates, not a
-ready-to-install endpoint. First build an image containing these files and
-meeting the [runtime contract](charts/ontop/README.md).
+| Dataset | Endpoint image repository |
+| --- | --- |
+| FAOSTAT | `ghcr.io/provider-project/sparql-faostat-ontop` |
+| BACI (2024) | `ghcr.io/provider-project/sparql-baci-ontop` |
+| TiVA (FDVA 2022) | `ghcr.io/provider-project/sparql-tiva-ontop` |
+
+Push the selected image first and ensure cluster nodes can pull it. Private
+images need a Kubernetes registry Secret referenced by `imagePullSecrets`.
+To build/publish an image, use `make build` / `make publish` in that dataset's
+`endpoint/` folder. For Kind, a locally built image can instead be loaded using
+`kind load docker-image IMAGE --name CLUSTER`.
+
+Ingress is disabled by default. To try the installed endpoint locally:
+
+```sh
+kubectl -n provider port-forward service/faostat-ontop 8081:80
+# SPARQL: http://localhost:8081/sparql
+```
+
+## Configure
+
+Override values per deployment, for example:
+
+```sh
+helm upgrade --install faostat ./charts/ontop -f examples/faostat.yaml \
+  --namespace provider --set image.tag=0.0.2
+```
+
+Use `image.digest` to pin an image exactly. Configure `ingress`, `resources`,
+`tmp.sizeLimit` and placement for the target cluster; large datasets such as
+TiVA need query-specific memory and scratch-space sizing. See the
+[chart README](charts/ontop/README.md) for the runtime contract and values.
+
+The chart consumes only the endpoint image. It creates a Deployment, Service,
+optional Ingress and test Pod; no Maven resolution, database loading or PVC is
+involved. Chart, endpoint and database versions are independent. A new dataset
+image does not require a new chart release.
 
 ## Validate and package
 
-Requires Helm 3.12+ or Helm 4, Python 3 and PyYAML (`requirements-dev.txt`).
-`HELM_BIN` can select a Helm executable outside PATH.
+Requires Helm, Python 3 and PyYAML (`requirements-dev.txt`). Set `HELM_BIN` if
+Helm is outside PATH.
 
 ```sh
 ./scripts/check.sh
 ./scripts/package.sh
 ```
 
-The package is written to `dist/ontop-0.1.0.tgz`. Render tests require no cluster.
-The check script fails when its dependencies are missing rather than silently
-skipping validation. Packaging validates first.
+Validation lints all dataset examples and checks rendered manifests without a
+cluster. Packaging writes `dist/ontop-0.1.1.tgz`.
 
-## Publish to an OCI registry
+## Publish the chart
 
-Source hosting and chart distribution are independent. After creating the Git
-repository, publish packaged charts to an OCI registry such as GHCR. These are
-proposed coordinates; neither this registry package nor the Git repository is
-assumed to exist. Authenticate using an account/token with package write access:
+For OCI distribution through GHCR (authenticate with package write access):
 
 ```sh
 helm registry login ghcr.io --username YOUR_GITHUB_USER
 ./scripts/package.sh
-helm push dist/ontop-0.1.0.tgz oci://ghcr.io/provider-project/charts
+helm push dist/ontop-0.1.1.tgz oci://ghcr.io/provider-project/charts
 ```
 
-Helm appends the chart name and version. Consumers can then install it with:
-
-```sh
-helm upgrade --install faostat oci://ghcr.io/provider-project/charts/ontop \
-  --version 0.1.0 -f examples/faostat.yaml \
-  --namespace provider --create-namespace --wait --timeout 5m
-```
-
-Make the registry package public if anonymous installation is intended; private
-charts require `helm registry login` for consumers as well. Endpoint image pull
-credentials are separate Kubernetes Secrets. See the official
-[Helm OCI documentation](https://helm.sh/docs/topics/registries/).
-
-Increment `charts/ontop/Chart.yaml` version for chart changes and publish a new
-immutable package version. The chart's `appVersion` documents its reference
-Ontop runtime; image tags/digests independently identify each dataset release.
-A new data image does not require publishing a new chart. Keep environment
-values (image pins, hostnames, TLS, resources) in the deployment/GitOps repository.
-
-CI can run `scripts/check.sh` on changes and `scripts/package.sh` plus `helm push`
-on release tags once the source host and registry credentials are configured.
-No workflow tied to unpublished registry credentials is installed here.
+After publishing, replace `./charts/ontop` in install commands with
+`oci://ghcr.io/provider-project/charts/ontop --version 0.1.1`.
+Chart registry login and Kubernetes image pull credentials are separate.
+Keep chart versions immutable; configure package visibility for intended users.

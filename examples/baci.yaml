@@ -1,0 +1,11 @@
+# Publish this endpoint image before deploying; override tag/digest for your release.
+image:
+  repository: ghcr.io/provider-project/sparql-baci-ontop
+  tag: "0.0.1"
+# Ingress remains disabled until you configure a controller, hostname and TLS.
+ingress:
+  hosts:
+    - host: baci.example.org
+      paths:
+        - path: /
+          pathType: Prefix

@@ -1,8 +1,8 @@
-# Local image built in ../sparql-faostat-ontop with docker compose build.
-# Load it into local cluster nodes, or override with a published repository/digest.
+# Publish this endpoint image before deploying; override tag/digest for your release.
 image:
-  repository: provider/sparql-faostat-ontop
+  repository: ghcr.io/provider-project/sparql-faostat-ontop
   tag: "0.0.1"
+# Ingress remains disabled until you configure a controller, hostname and TLS.
 ingress:
   hosts:
     - host: faostat.example.org

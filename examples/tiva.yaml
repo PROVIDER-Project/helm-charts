@@ -1,9 +1,8 @@
-# TEMPLATE ONLY: TiVA currently uses Compose with host-mounted data/configuration.
-# First build and publish a self-contained TiVA image matching the chart contract.
-# Replace both image fields below before deploying. No such published image is assumed.
+# Publish this endpoint image before deploying; override tag/digest for your release.
 image:
-  repository: registry.example.org/provider/sparql-tiva-ontop
-  tag: "REPLACE_WITH_IMAGE_TAG"
+  repository: ghcr.io/provider-project/sparql-tiva-ontop
+  tag: "0.0.1"
+# Ingress remains disabled until you configure a controller, hostname and TLS.
 ingress:
   hosts:
     - host: tiva.example.org

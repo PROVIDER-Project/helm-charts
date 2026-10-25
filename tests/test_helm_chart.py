@@ -29,7 +29,7 @@ class HelmChartTests(unittest.TestCase):
         deployment = docs['Deployment']
         pod = deployment['spec']['template']['spec']
         container = pod['containers'][0]
-        self.assertEqual(container['image'], 'provider/sparql-faostat-ontop:0.0.1')
+        self.assertEqual(container['image'], 'ghcr.io/provider-project/sparql-faostat-ontop:0.0.1')
         self.assertEqual(container['imagePullPolicy'], 'IfNotPresent')
         self.assertTrue(container['securityContext']['readOnlyRootFilesystem'])
         self.assertEqual(pod['securityContext']['runAsUser'], 999)
@@ -66,9 +66,9 @@ class HelmChartTests(unittest.TestCase):
         self.assertEqual(spec['replicas'], 2)
         self.assertEqual(spec['strategy'], {'type': 'Recreate'})
         self.assertEqual(spec['template']['spec']['containers'][0]['image'],
-                         'provider/sparql-faostat-ontop@' + digest)
+                         'ghcr.io/provider-project/sparql-faostat-ontop@' + digest)
         self.assertEqual(docs['Pod']['spec']['containers'][0]['image'],
-                         'provider/sparql-faostat-ontop@' + digest)
+                         'ghcr.io/provider-project/sparql-faostat-ontop@' + digest)
 
     def test_explicit_image_is_required(self):
         result = subprocess.run([HELM, 'template', 'ontop', str(CHART)],
@@ -76,18 +76,24 @@ class HelmChartTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('image', result.stderr)
 
-    def test_tiva_example_and_independent_releases(self):
-        docs = self.render('-f', str(CHART.parents[1] / 'examples/tiva.yaml'))
-        self.assertEqual(docs['Deployment']['spec']['template']['spec']['containers'][0]['image'],
-                         'registry.example.org/provider/sparql-tiva-ontop:REPLACE_WITH_IMAGE_TAG')
-        result = subprocess.run([HELM, 'template', 'tiva', str(CHART),
-                                 '-f', str(CHART.parents[1] / 'examples/tiva.yaml')],
-                                capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        tiva = {d['kind']: d for d in yaml.safe_load_all(result.stdout) if d}
-        self.assertEqual(tiva['Service']['metadata']['name'], 'tiva-ontop')
-        self.assertEqual(tiva['Deployment']['spec']['selector']['matchLabels']['app.kubernetes.io/instance'],
-                         'tiva')
+    def test_dataset_examples_and_independent_releases(self):
+        for dataset in ['faostat', 'baci', 'tiva']:
+            with self.subTest(dataset=dataset):
+                result = subprocess.run([HELM, 'template', dataset, str(CHART),
+                                         '-f', str(CHART.parents[1] / f'examples/{dataset}.yaml')],
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                docs = {d['kind']: d for d in yaml.safe_load_all(result.stdout) if d}
+                image = f'ghcr.io/provider-project/sparql-{dataset}-ontop:0.0.1'
+                pod = docs['Deployment']['spec']['template']['spec']
+                self.assertEqual(pod['containers'][0]['image'], image)
+                self.assertEqual(docs['Pod']['spec']['containers'][0]['image'], image)
+                self.assertEqual(docs['Service']['metadata']['name'], f'{dataset}-ontop')
+                self.assertEqual(docs['Deployment']['spec']['selector']['matchLabels']
+                                 ['app.kubernetes.io/instance'], dataset)
+                self.assertEqual(set(docs), {'Deployment', 'Service', 'Pod'})
+                self.assertEqual(pod['volumes'],
+                                 [{'name': 'tmp', 'emptyDir': {'sizeLimit': '1Gi'}}])
 
     def test_reject_invalid_values(self):
         for value in ['replicaCount=-1', 'service.port=0', 'image.digest=sha256:bad',
