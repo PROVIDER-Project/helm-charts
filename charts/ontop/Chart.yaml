@@ -2,7 +2,7 @@ apiVersion: v2
 name: ontop
 description: A read-only Ontop endpoint with DuckDB data and mappings baked into its image
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: "5.5.0"
 kubeVersion: ">=1.25.0-0"
 home: https://github.com/PROVIDER-Project/helm-charts

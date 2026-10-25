@@ -69,7 +69,7 @@ Helm is outside PATH.
 ```
 
 Validation lints all dataset examples and checks rendered manifests without a
-cluster. Packaging writes `dist/ontop-0.1.1.tgz`.
+cluster. Packaging writes `dist/ontop-0.1.2.tgz`.
 
 ## Publish the chart
 
@@ -78,10 +78,16 @@ For OCI distribution through GHCR (authenticate with package write access):
 ```sh
 helm registry login ghcr.io --username YOUR_GITHUB_USER
 ./scripts/package.sh
-helm push dist/ontop-0.1.1.tgz oci://ghcr.io/provider-project/charts
+helm push dist/ontop-0.1.2.tgz oci://ghcr.io/provider-project/charts
 ```
 
 After publishing, replace `./charts/ontop` in install commands with
-`oci://ghcr.io/provider-project/charts/ontop --version 0.1.1`.
+`oci://ghcr.io/provider-project/charts/ontop --version 0.1.2`.
 Chart registry login and Kubernetes image pull credentials are separate.
 Keep chart versions immutable; configure package visibility for intended users.
+
+## Licence
+
+Original project material is licensed under [Apache-2.0](LICENSE).
+See [licensing notes](LICENSING.md) for third-party terms and the declaration
+that information about those terms was derived with AI assistance.

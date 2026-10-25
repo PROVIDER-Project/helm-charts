@@ -63,3 +63,9 @@ helm uninstall faostat --namespace provider
 Rollback requires the previous image to remain available. Uninstall leaves no
 database PVC. Each dataset has its own release; image and chart versions remain
 independent.
+
+## Licence
+
+Chart templates and original documentation are [Apache-2.0 licensed](LICENSE).
+See [licensing notes](LICENSING.md) for the scope and AI-assisted third-party
+licence information. Endpoint images and datasets retain their own terms.
